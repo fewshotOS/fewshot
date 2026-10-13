@@ -248,6 +248,13 @@ interface Growth {
   rollback @3 (id :ObjectRef) -> ();
 }
 
+# Held only by the trusted approval surface, and by the gate when enforcing a
+# user-approved policy. adopt fails on any safety decrease or detected drift.
+interface GrowthAdmin {
+  adopt @0 (id :ObjectRef) -> (auditSeq :UInt64);
+  reject @1 (id :ObjectRef, reason :Text) -> ();
+}
+
 # ---------- Example app action ----------
 
 interface Mail {

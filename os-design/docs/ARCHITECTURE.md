@@ -202,6 +202,21 @@ Deliberately small: let-bindings, calls to registered actions, calls to readers 
 
 Agents improve through memories, skills, lessons and adapters — all proposed, labeled, evaluated, approved and reversible. Learning can never change capabilities, policies or the gate. Full design: [GROWTH.md](GROWTH.md).
 
+Growth is a core service (`growthd`) with two interfaces, split so that the authority to *propose* a change never includes the authority to *adopt* it:
+
+| Interface | Methods | Held by |
+|---|---|---|
+| `Growth` | `propose` · `evaluate` · `list` · `rollback` | agentd, consolidation jobs (scoped by delegation) |
+| `GrowthAdmin` | `adopt` · `reject` | Trusted approval surface only; gate when enforcing a user-approved policy |
+
+- `propose` takes a `GrowthChange` (`memory` · `skill` · `lesson` · `adapter`). Its label is computed by `labeld` as the join of its `sources`; the proposer cannot set it.
+- `evaluate` runs the change on a txn branch against task, regression and safety suites and returns an `EvalReport`. Safety suites are manifest-owned and read-only to every agent.
+- `adopt` refuses any change whose `EvalReport` shows a safety decrease or drift, regardless of caller.
+- `rollback` is available to agents as well as users: undoing a change can only reduce what the agent has learned, never its authority.
+- Adopted memories and skills live in `store`; adopted adapters are registered with `infer`. Every `InferResult` and audit entry lists the growth objects that influenced it.
+
+Lifecycle: `proposed → evaluated → adopted | rejected`, and `adopted → rolledBack`.
+
 ## 6. User layer
 
 ### 6.1 Trusted approval surface (I6)
@@ -228,6 +243,17 @@ A normal, deterministic, direct-manipulation desktop. Always available, never de
 ## 8. Interfaces
 
 All IPC is defined in Cap'n Proto ([ADR-0002](adr/0002-rust-and-capnp.md)). Cap'n Proto's capability-passing RPC maps directly onto seL4 capabilities: holding an interface reference *is* holding the authority. Draft schemas: [`interfaces/core.capnp`](../interfaces/core.capnp).
+
+| Interface | Served by | Purpose |
+|---|---|---|
+| `Store` | store | Typed, labeled, versioned objects |
+| `Transaction` | txn | Session branch, diff, outbox, commit / abort |
+| `Principal` | agentd | Labels, attenuating delegation, sessions |
+| `Gate` | gate | Every action invocation |
+| `Infer` | infer | Grammar-constrained generation, embeddings, replay |
+| `Growth` | growthd | Propose, evaluate, list and roll back growth changes |
+| `GrowthAdmin` | growthd | Adopt / reject — trusted surface only |
+| App actions (e.g. `Mail`) | apps | Typed actions with effect metadata |
 
 ## 9. How the invariants are enforced
 

@@ -76,4 +76,4 @@ Local growth makes *this user's* agent better at *this user's* work. Changes to 
 
 ## 8. Interface
 
-See `Memory`, `Skill`, `Adapter`, `EvalReport` and `Growth` in [`interfaces/core.capnp`](../interfaces/core.capnp).
+See `Memory`, `Skill`, `Adapter`, `EvalReport`, `Growth` and `GrowthAdmin` in [`interfaces/core.capnp`](../interfaces/core.capnp).
