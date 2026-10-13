@@ -37,6 +37,7 @@ annotation integrityFloor(method) :IntegrityLevel;
 annotation egressTags(method) :List(Text);
 annotation idempotent(method) :Void;
 annotation compensatedBy(method) :Text;   # name of the undo method
+annotation postcondition(method) :Text;   # read-only check run after the effect
 
 # ---------- Store ----------
 
@@ -57,6 +58,14 @@ interface Store {
   query @1 (text :Text, schema :Text, limit :UInt32) -> (results :List(ObjectRef));
   put @2 (schema :Text, body :AnyPointer) -> (ref :ObjectRef);
   history @3 (ref :ObjectRef) -> (versions :List(ObjectRef));
+  update @4 (base :ObjectRef, body :AnyPointer) -> (result :UpdateResult);  # required for agents
+}
+
+struct UpdateResult {
+  union {
+    written @0 :ObjectRef;
+    stale @1 :ObjectRef;         # current version; re-read and merge
+  }
 }
 
 # ---------- Transactions ----------
@@ -92,6 +101,18 @@ struct Delegation {
   expiresAtUnixMs @4 :UInt64;
 }
 
+struct GoalStep {
+  description @0 :Text;
+  auditSeq @1 :UInt64;           # 0 while open
+}
+
+struct GoalLedger {
+  goal @0 :Text;                 # user's request, verbatim
+  constraints @1 :List(Text);
+  done @2 :List(GoalStep);
+  open @3 :List(GoalStep);
+}
+
 interface Principal {
   label @0 () -> (label :Label);
   delegate @1 (delegation :Delegation) -> (child :Principal);   # attenuating only
@@ -108,13 +129,44 @@ struct Invocation {
   argumentProvenance @3 :List(Provenance);
 }
 
+enum RefusalReason {
+  missingCapability @0;
+  labelConflict @1;
+  budgetExhausted @2;
+  staleVersion @3;
+  approvalDenied @4;
+  policyViolation @5;
+  postconditionFailed @6;
+}
+
+enum Grantor {
+  user @0;
+  admin @1;
+  manifest @2;
+  none @3;
+}
+
+struct Refusal {
+  reason @0 :RefusalReason;
+  detail @1 :Text;
+  remedy @2 :Text;
+  grantor @3 :Grantor;
+}
+
+struct PostconditionResult {
+  check @0 :Text;
+  passed @1 :Bool;
+  detail @2 :Text;
+}
+
 struct Decision {
   union {
     executed @0 :AnyPointer;             # result for read / localReversible
     queued @1 :UInt32;                   # outbox index
-    denied @2 :Text;                     # reason
+    denied @2 :Refusal;
   }
   auditSeq @3 :UInt64;
+  postcondition @4 :PostconditionResult; # set after the effect runs
 }
 
 interface Gate {

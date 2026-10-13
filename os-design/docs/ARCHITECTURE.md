@@ -217,6 +217,10 @@ Growth is a core service (`growthd`) with two interfaces, split so that the auth
 
 Lifecycle: `proposed → evaluated → adopted | rejected`, and `adopted → rolledBack`.
 
+### 5.5 Designing around model limitations
+
+The executor and gate add mechanisms for known model failure modes: claims with provenance and independent verification, a goal ledger for long tasks, version-checked writes, action postconditions, a dissent reviewer, freshness metadata, plan agreement sampling, and structured refusals. Full design: [LIMITATIONS.md](LIMITATIONS.md).
+
 ## 6. User layer
 
 ### 6.1 Trusted approval surface (I6)

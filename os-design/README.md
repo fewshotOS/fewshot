@@ -47,6 +47,7 @@ Read next:
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — components, data flow, interfaces
 - [`docs/INFERENCE.md`](docs/INFERENCE.md) — how models run: weights, labels, constrained decoding, scheduling
 - [`docs/GROWTH.md`](docs/GROWTH.md) — how agents learn and improve without growing their own authority
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — designing around model failure modes: hallucination, drift, staleness, sycophancy
 - [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) — adversaries, trust boundaries, what is out of scope
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — milestones from "boots in QEMU" to "survives an injection benchmark"
 - [`docs/adr/`](docs/adr/) — architecture decision records
