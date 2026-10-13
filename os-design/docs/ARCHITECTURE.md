@@ -151,7 +151,8 @@ Append-only, hash-chained log of every gate decision: principal, delegation chai
 - **Scheduler:** NPU/GPU time and KV-cache memory are scheduled resources with priorities and preemption. Interactive requests (the user is waiting) preempt background ones. Built on MCS scheduling contexts plus an accelerator queue.
 - **KV-cache manager:** caches are memory objects owned by sessions, swappable, labeled — a cache holding `health` data is itself `health`-tainted.
 - **Routing:** local by default. A remote model is an `external` effect: prompts are checked by `egress` against the remote provider's clearance (I3).
-- **Interface:** model-agnostic (`generate`, `embed`, `classify`, structured-output with schema). Apps never bundle their own copy of a shared base model.
+- **Interface:** model-agnostic (`generate`, `embed`, `replay`, grammar-constrained output). Apps never bundle their own copy of a shared base model.
+- Full design: [INFERENCE.md](INFERENCE.md).
 
 ### 4.8 egress
 
@@ -196,6 +197,10 @@ This is the CaMeL pattern, but enforced by the OS instead of by an application f
 ### 5.3 Plan DSL
 
 Deliberately small: let-bindings, calls to registered actions, calls to readers with an output schema, bounded loops over collections, conditionals. No eval, no dynamic code. Plans are stored with the session and shown in the audit log.
+
+### 5.4 Growth
+
+Agents improve through memories, skills, lessons and adapters — all proposed, labeled, evaluated, approved and reversible. Learning can never change capabilities, policies or the gate. Full design: [GROWTH.md](GROWTH.md).
 
 ## 6. User layer
 

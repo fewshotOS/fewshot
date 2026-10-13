@@ -129,10 +129,123 @@ enum Priority {
   interactive @2;
 }
 
+enum ModelTier {
+  alwaysOn @0;
+  planner @1;
+  reader @2;
+  remote @3;
+}
+
+struct ModelInfo {
+  name @0 :Text;
+  weightHash @1 :Data;           # signed, content-addressed weights
+  tier @2 :ModelTier;
+  contextTokens @3 :UInt32;
+  local @4 :Bool;
+}
+
+struct SamplingParams {
+  temperature @0 :Float32;
+  topP @1 :Float32;
+  maxTokens @2 :UInt32;
+  seed @3 :UInt64;               # recorded for replay
+}
+
+struct InferRequest {
+  model @0 :Text;
+  adapters @1 :List(ObjectRef);  # their labels join into the output label
+  context @2 :List(ObjectRef);   # assembled by the executor; model fetches nothing
+  instruction @3 :Text;
+  grammar @4 :Text;              # output schema name or plan-DSL grammar
+  sampling @5 :SamplingParams;
+  priority @6 :Priority;
+}
+
+struct InferResult {
+  output @0 :Text;               # guaranteed to match the grammar
+  label @1 :Label;               # join of context, adapter and instruction labels
+  callRecord @2 :ObjectRef;      # replayable record of this call
+}
+
 interface Infer {
-  generate @0 (model :Text, prompt :Text, outputSchema :Text, priority :Priority)
-      -> (output :Text, label :Label);
-  embed @1 (model :Text, input :Text) -> (vector :List(Float32));
+  models @0 () -> (models :List(ModelInfo));
+  generate @1 (request :InferRequest) -> (result :InferResult);
+  embed @2 (model :Text, input :ObjectRef) -> (vector :List(Float32), label :Label);
+  replay @3 (callRecord :ObjectRef) -> (result :InferResult);
+}
+
+# ---------- Growth ----------
+
+enum GrowthKind {
+  memory @0;
+  skill @1;
+  lesson @2;
+  adapter @3;
+}
+
+enum GrowthState {
+  proposed @0;
+  evaluated @1;
+  adopted @2;
+  rejected @3;
+  rolledBack @4;
+}
+
+struct Memory {
+  subject @0 :Text;
+  fact @1 :Text;
+  pinned @2 :Bool;
+}
+
+struct Skill {
+  name @0 :Text;
+  taskClass @1 :Text;
+  procedure @2 :Text;            # plan-DSL template the planner may reuse
+}
+
+struct Adapter {
+  baseWeightHash @0 :Data;
+  deltaHash @1 :Data;
+  rank @2 :UInt16;
+  trainingSet @3 :List(ObjectRef);
+}
+
+struct EvalScore {
+  suite @0 :Text;
+  before @1 :Float32;
+  after @2 :Float32;
+}
+
+struct EvalReport {
+  task @0 :List(EvalScore);
+  regression @1 :List(EvalScore);
+  safety @2 :List(EvalScore);    # any decrease => automatic reject
+  driftDetected @3 :Bool;
+}
+
+struct GrowthChange {
+  id @0 :ObjectRef;
+  kind @1 :GrowthKind;
+  state @2 :GrowthState;
+  label @3 :Label;               # join of source labels
+  sources @4 :List(ObjectRef);   # sessions / audit entries it was learned from
+  eval @5 :EvalReport;
+  body :union {
+    memory @6 :Memory;
+    skill @7 :Skill;
+    lesson @8 :Text;
+    adapter @9 :Adapter;
+  }
+}
+
+# Agents may propose; only the user (via the trusted surface) or a user-approved
+# policy enforced by the gate may adopt. Nothing here can alter capabilities,
+# labels policy, the gate, or the eval suites.
+interface Growth {
+  propose @0 (change :GrowthChange) -> (id :ObjectRef);
+  evaluate @1 (id :ObjectRef) -> (report :EvalReport);
+  list @2 (state :GrowthState) -> (changes :List(GrowthChange));
+  rollback @3 (id :ObjectRef) -> ();
 }
 
 # ---------- Example app action ----------
