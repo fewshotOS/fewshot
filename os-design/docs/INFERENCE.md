@@ -71,6 +71,51 @@ Models never call tools. They produce plans or values; the executor and gate dec
 
 Each call records: weight hash, adapter hashes, context refs, grammar, sampling parameters, seed, output. With deterministic kernels a call can be **replayed** to answer "why did the agent do that?".
 
-## 9. Interface
+## 9. Default models
+
+Arbiter is model-agnostic: `infer` loads any signed weights through the same interface. The defaults below are a starting point, chosen by these rules.
+
+### Selection rules
+
+1. **Open weights for every local tier.** Weights must be signed, hashed and run on-device.
+2. **Permissive licence (Apache-2.0 / MIT) for anything shipped in the image.** Models with custom or use-restricted licences are optional downloads, not bundled.
+3. **Planner:** strong structured output and tool use — it writes plan-DSL under a grammar.
+4. **Readers:** small and fast — they only fill schemas and their output is distrusted anyway.
+5. **Hardware-aware:** at first boot `infer` detects RAM, VRAM and NPU and proposes the best set that fits.
+
+### Defaults by tier
+
+| Tier | Class of model | Ships in image |
+|---|---|---|
+| Always-on | ~0.5–1B instruction model + speech-to-text + embedding model | Yes |
+| Reader | ~1–4B instruction model | Yes |
+| Planner | 7–32B tool-use / coding-tuned model, sized to hardware | Downloaded at setup |
+| Remote | Frontier API models, opt-in per provider | No — user adds a provider and its clearance |
+
+Candidate families with permissively licensed releases at these sizes include Qwen, Mistral and Phi. Families with custom licences (e.g. Llama, Gemma) are offered as optional downloads. The open-model landscape moves quickly; defaults are re-evaluated per release against current benchmarks and licences.
+
+### Planner by hardware
+
+| Machine | Planner |
+|---|---|
+| 8 GB RAM, no GPU | ~3–4B, quantised |
+| 16–32 GB / unified-memory laptops | 7–14B |
+| 24 GB+ VRAM GPU | ~30B class |
+| Below that | No local planner: the classic UI works without agents, or a remote planner is used under `egress` rules |
+
+### Remote providers
+
+Closed frontier models (e.g. Claude) run only in the remote tier. The user adds a provider and sets its **clearance** — which secrecy tags may be sent to it. `egress` enforces that clearance on every prompt (I3). No model, local or remote, is trusted by the design; remote models handle hard reasoning, local models handle private and routine work.
+
+### Runtime path
+
+| Phase | Engine | Location |
+|---|---|---|
+| Early | llama.cpp with GGUF quantised models | Linux driver domain, accelerator passthrough |
+| Later | Native Rust inference engine | Native component on the tensor queue |
+
+The `Infer` interface is identical in both phases; models and apps are unaffected by the switch.
+
+## 10. Interface
 
 See `Infer`, `ModelInfo` and `InferRequest` in [`interfaces/core.capnp`](../interfaces/core.capnp).
