@@ -81,11 +81,14 @@ Every principal (process, agent session) and every stored object carries a **lab
 | Part | Meaning | Rule on read |
 |---|---|---|
 | **Secrecy** — set of tags, e.g. `{health, work:acme}` | Who may eventually see this data | Reader's secrecy ⊇ data's secrecy (taint goes *up*) |
-| **Integrity** — a level, e.g. `user > system-app > third-party > untrusted:web` | How much the data can be trusted to steer actions | Reader's integrity ≤ data's integrity (trust goes *down*) |
+| **Integrity** — a level, e.g. `user > system-app > bounded > third-party > untrusted:web` | How much the data can be trusted to steer actions | Reader's integrity ≤ data's integrity (trust goes *down*) |
 
 - Labels only move in the safe direction automatically. A principal **cannot** lower its own secrecy or raise its own integrity.
 - **Declassification / endorsement** happens only via (a) the user through the trusted approval surface, or (b) a *certified transformer* registered in the manifest — e.g. a reader whose output schema is a closed enum or bounded number, which cannot carry free-form instructions.
+- Certified transformers *bound* untrusted influence but do not remove it: an injection can still pick which enum value comes out. Their output therefore gets the **`bounded`** integrity level, which may only select among options the user pre-approved (e.g. a folder from an allow-list), never fill open-ended arguments.
 - `labeld` is the single source of truth for current labels; `gate`, `store` and `egress` query it.
+- **Value table:** every runtime value in an agent session lives in `labeld` with its label and provenance. Agents hold only opaque handles; deriving a new value goes through `labeld`, which computes its label. The gate resolves argument handles itself, so no agent component can misstate a label. See [ADR-0005](adr/0005-labeled-value-handles.md).
+- **Per-label encryption keys:** each secrecy tag has its own data key. Deleting a tag's key cryptographically erases every object, cache and adapter carrying it; the same keys scope backup and sync.
 
 Model: decentralized information flow control (Flume/HiStar lineage), simplified to one integrity lattice and a secrecy tag set. See [ADR-0003](adr/0003-information-flow-labels.md).
 
@@ -112,6 +115,8 @@ abort(session)  ──► branch discarded, outbox dropped
 
 - Users can also **roll back a committed session** for local state (the store keeps history). External effects that already happened are listed with their compensating actions where an app declared one.
 - **Dry-run** = run the session, show the diff and outbox, abort.
+- **Drafts by default:** where an app offers it, an agent's external effect is first a local draft (`mail.draft`, `payment.prepare`). Drafting from tainted data is free; the step that releases a draft is where approval happens.
+- **Checkpoints:** long tasks ("send the request, wait for the reply, act on it") place checkpoints in the plan. At a checkpoint the outbox so far is approved and committed and the session continues on a new branch. Multi-effect commits run as **sagas**: if one effect fails, already-executed effects are compensated in reverse order where the app declared a compensation, and the user is shown what could not be undone.
 
 ### 4.4 actions — action registry
 
@@ -136,8 +141,9 @@ The single choke point for every action invocation, human- or agent-initiated:
 2. **Label check** — integrity of every argument ≥ `integrityFloor`, otherwise require approval (I2). Secrecy of arguments ⊆ `egressTags` and destination clearance, otherwise deny or require declassification (I3).
 3. **Budget check** — the delegation's time, money, rate, and effect-count limits.
 4. **Effect routing** — `read`/`localReversible` execute on the txn branch; everything else goes to the outbox.
+   - Argument labels are never taken from the caller: the gate resolves argument handles in `labeld` (ADR-0005).
 5. **Audit** — append the decision and arguments' provenance to `audit` *before* execution (I4).
-6. **Approval** — when required, send a structured request to the trusted approval surface; the gate blocks until the user answers.
+6. **Approval** — when required, send a structured request to the trusted approval surface; the gate blocks until the user answers. The approval is a signature over the **invocation digest** (action, resolved arguments, labels, session, nonce); the gate executes only if the digest still matches, and each approval is single-use (ADR-0006).
 
 The gate is small, written in Rust, has no dependency on any model, and is the primary target for formal verification of user space.
 
@@ -188,9 +194,9 @@ flowchart LR
 ```
 
 - The **planner** never sees untrusted content. It writes a *plan* — a small, typed program in the plan DSL — referencing untrusted data only by handle.
-- The **executor** runs the plan and tracks a label for every value. Values derived from untrusted content inherit its low integrity.
+- The **executor** runs the plan holding only **value handles**. Every value and its label live in `labeld`'s value table; values derived from untrusted content inherit its low integrity there, where the executor cannot change it (ADR-0005).
 - **Quarantined readers** process untrusted content (web pages, emails, documents) and return values matching a requested schema. They hold no capabilities: even a fully hijacked reader can only return a wrongly-filled value.
-- The gate sees the true labels of every argument. If a tainted value flows into, say, the recipient of `mail.send`, the gate requires approval — no matter what any model "decided" (I2).
+- The gate resolves every argument handle itself, so it sees the true labels even if the executor is compromised. If a tainted value flows into, say, the recipient of `mail.send`, the gate requires approval — no matter what any model "decided" (I2).
 
 This is the CaMeL pattern, but enforced by the OS instead of by an application framework.
 
@@ -228,6 +234,10 @@ The executor and gate add mechanisms for known model failure modes: claims with 
 - Rendered by the compositor in a reserved screen region / layer no other component can draw into or capture.
 - Secure attention: a hardware key combo or dedicated gesture always reaches it.
 - Shows *structured* facts from the gate — action, arguments, which arguments came from which untrusted source — never model-written prose alone.
+- Wording comes from **fixed plain-language templates** per action and refusal type, filled with gate data. Models never write approval text.
+- **Batching:** related effects in a session are approved as one decision ("send these 4 emails"); each still verifies against its own digest.
+- **Risk-proportional checking:** verifier, dissent reviewer and plan sampling run only above a risk threshold, keeping routine work cheap and prompts rare.
+- Approvals are signed by a key held only by the trusted UI path (ADR-0006).
 - Input events for it are routed directly from the input driver; agents and apps cannot synthesize them.
 
 ### 6.2 Intent shell
@@ -238,11 +248,38 @@ Natural-language and voice entry point. Shows the plan, the live session diff, t
 
 A normal, deterministic, direct-manipulation desktop. Always available, never dependent on a model.
 
+### 6.4 Browser
+
+The web is where most untrusted content and most real actions live, so the browser is a native core component, not a legacy app.
+
+- Each **origin is its own principal** with its own label (default integrity `untrusted:web`, secrecy per site policy).
+- Page content reaches agents only through quarantined readers.
+- Sites exposing structured actions (forms with schemas, OpenAPI, MCP endpoints) are surfaced as **typed actions** through the registry, with `external` effects and per-origin egress clearances.
+- Sites without structure are driven through the screen/DOM bridge, outputs labeled low-integrity.
+- Credentials and payment details are held by the browser and filled by the gate after approval; agents never see them.
+
 ## 7. System configuration, boot and update
 
 - **Declarative manifest** describes the whole system: components, their capabilities, label policies, destination clearances, installed models.
 - The image builder turns the manifest into a **content-addressed, signed image**. Updates are A/B: a new image boots or the previous one comes back.
 - **Measured boot** records the image hash; remote attestation available for enterprise policy.
+
+### 7.1 Policy layers
+
+Policy is layered, and each layer can only **narrow** the one above:
+
+```
+vendor baseline ─► organisation admin ─► user ─► delegation ─► sub-delegation
+```
+
+The gate evaluates the intersection. This covers enterprise devices, family devices with a guardian, and personal machines with one layer collapsed.
+
+### 7.2 Multiple devices
+
+- Capabilities can be held across devices using an object-capability network protocol (CapTP / OCapN family) over authenticated channels.
+- Synced store objects carry their labels; each device has a **device clearance** — e.g. a phone may hold `personal` but not `work:acme`.
+- Per-label keys (§4.1) mean a device without clearance receives only ciphertext, or nothing.
+- Agent sessions are local to one device; cross-device effects go through the remote device's gate.
 
 ## 8. Interfaces
 
@@ -264,16 +301,20 @@ All IPC is defined in Cap'n Proto ([ADR-0002](adr/0002-rust-and-capnp.md)). Cap'
 | Invariant | Enforced by |
 |---|---|
 | I1 no ambient authority | seL4 capabilities · supervisor manifest · delegation |
-| I2 untrusted data can't steer high-impact effects | labeld · executor taint tracking · gate integrity floor |
+| I2 untrusted data can't steer high-impact effects | labeld value handles · gate integrity floor · bounded integrity |
 | I3 no unauthorized egress | labeld · egress clearances · infer routing |
 | I4 audit before effect | gate ordering · audit hash chain |
 | I5 reversible local effects | txn branches · versioned store · outbox |
-| I6 unspoofable approvals | compositor reserved layer · direct input routing |
+| I6 unspoofable approvals | compositor reserved layer · direct input routing · signed digest-bound approvals |
 
-## 10. Open questions
+## 10. Delivery: runtime first
+
+The same core crates ship first as the **Arbiter runtime** on Linux, Windows and macOS — an MCP-compatible server exposing gated actions with labels, outbox and approvals — and later as the high-assurance OS. On a host OS the runtime cannot enforce I1 or I6 against a compromised host. See [ADR-0007](adr/0007-portable-runtime-first.md).
+
+## 11. Open questions
 
 - Granularity of labels on large mixed objects (one label per email, or per field?).
-- Usable declassification: how to avoid approval fatigue without weakening I2. Candidate: learned *policies* the user approves once, enforced by the gate rather than the model.
-- How much of the gate and executor can be formally verified, and with which toolchain (Verus, Kani, Prusti).
+- Usable declassification: how to avoid approval fatigue without weakening I2. Candidates now in the design: drafts by default, batching, standing policies, risk-proportional checks. Target to validate in the runtime: ≤ 3 approval prompts per hour of typical use.
+- Formal verification scope: the plan is TLA+ specifications for `txn`/outbox/checkpoints and Verus proofs for `gate` and `labeld`, written before the implementation. Open: how far into `store` this can reach.
 - Accelerator isolation: GPU/NPU drivers are huge; how much must live in the Linux driver domain long-term.
 - Plan DSL expressiveness vs. analysability.

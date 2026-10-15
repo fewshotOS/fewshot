@@ -11,13 +11,15 @@
 
 | Adversary | Capability | Primary defence |
 |---|---|---|
-| **Malicious content** — web pages, emails, documents, images containing instructions | Can fully control a model that reads it | Planner/reader split, taint tracking, gate integrity floors (I2) |
+| **Malicious content** — web pages, emails, documents, images containing instructions | Can fully control a model that reads it | Planner/reader split, labeled value handles, gate integrity floors (I2) |
 | **Compromised or misaligned model** (local or remote) | Arbitrary outputs from any model call | Models hold no authority; all effects go through the gate |
 | **Malicious app** | Arbitrary code in its own protection domain | Capabilities (I1), labels, cannot reach the approval surface (I6) |
 | **Malicious remote model provider** | Sees whatever prompt is sent to it | Egress clearances; local-first routing (I3) |
 | **Network attacker** | Read/modify traffic | TLS in `net`/`egress`; signed updates |
 | **Compromised driver** | Arbitrary code in driver domain, DMA | IOMMU, isolated component, restart by supervisor |
-| **Approval fatigue** | Social: user clicks "yes" to everything | Structured approvals, policies approved once, rate limits on prompts |
+| **Approval swapping / replay** — change arguments between display and execution, reuse an old approval | Compromised non-TCB component | Digest-bound, signed, single-use approvals (ADR-0006) |
+| **Bounded steering** — injection picks which allowed option a certified transformer outputs | Influence over a closed choice | `bounded` integrity: may only select among user pre-approved options |
+| **Approval fatigue** | Social: user clicks "yes" to everything | Drafts by default, batched approvals, standing policies, risk-proportional checks, plain-language templates; measured in R3 |
 
 ## Trust boundaries
 
@@ -25,10 +27,11 @@ Trusted computing base (TCB), in order of how much we care about shrinking and v
 
 1. seL4 kernel (verified)
 2. supervisor, gate, labeld, txn, audit, egress
-3. compositor's trusted surface and input routing
-4. Executor's taint tracking (not the models it calls)
+3. compositor's trusted surface, input routing and approval signing key
 
-**Not** in the TCB: every model, agentd's planner and readers, all apps, all drivers, the Linux VM.
+**Not** in the TCB: every model, agentd's planner, readers **and executor** (ADR-0005: labels live in `labeld`, agents hold only handles), all apps, all drivers, the Linux VM.
+
+When running as the **Arbiter runtime** on a host OS (ADR-0007), the host kernel and its administrator are also in the TCB.
 
 ## Explicitly out of scope (for now)
 

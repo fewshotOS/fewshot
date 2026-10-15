@@ -9,8 +9,9 @@ enum IntegrityLevel {
   untrustedWeb @0;
   untrustedLegacy @1;
   thirdParty @2;
-  systemApp @3;
-  user @4;
+  bounded @3;                    # certified-transformer output: may only select pre-approved options
+  systemApp @4;
+  user @5;
 }
 
 struct Label {
@@ -38,6 +39,7 @@ annotation egressTags(method) :List(Text);
 annotation idempotent(method) :Void;
 annotation compensatedBy(method) :Text;   # name of the undo method
 annotation postcondition(method) :Text;   # read-only check run after the effect
+annotation draftFor(method) :Text;        # this method creates a local draft of the named external action
 
 # ---------- Store ----------
 
@@ -72,7 +74,7 @@ struct UpdateResult {
 
 struct OutboxEntry {
   action @0 :Text;
-  argumentLabels @1 :List(Label);
+  digest @1 :Data;               # invocation digest (ADR-0006)
   needsApproval @2 :Bool;
 }
 
@@ -82,6 +84,7 @@ interface Transaction {
   outbox @2 () -> (entries :List(OutboxEntry));
   commit @3 () -> (auditSeq :UInt64);
   abort @4 () -> ();
+  checkpoint @5 () -> (auditSeq :UInt64);  # approve + commit outbox so far, continue on a new branch
 }
 
 # ---------- Delegation ----------
@@ -122,11 +125,33 @@ interface Principal {
 
 # ---------- Gate ----------
 
+# ---------- Value table (ADR-0005) ----------
+# Agents hold only handles; labels and provenance live in labeld.
+
+struct ValueHandle {
+  id @0 :UInt64;                 # session-scoped, unforgeable via the ValueTable capability
+}
+
+interface ValueTable {
+  intern @0 (value :AnyPointer, source :ObjectRef) -> (handle :ValueHandle);
+  derive @1 (op :Text, inputs :List(ValueHandle)) -> (handle :ValueHandle);  # label = join of inputs
+  read @2 (handle :ValueHandle) -> (value :AnyPointer);                      # raises caller's label
+  label @3 (handle :ValueHandle) -> (label :Label, provenance :Provenance);
+}
+
+# ---------- Approvals (ADR-0006) ----------
+
+struct SignedApproval {
+  digests @0 :List(Data);        # one or more invocation digests (batched approval)
+  nonce @1 :Data;
+  expiresAtUnixMs @2 :UInt64;
+  policy @3 :ObjectRef;          # set when a standing policy authorised it
+  signature @4 :Data;            # trusted UI path key
+}
+
 struct Invocation {
   action @0 :Text;
-  arguments @1 :AnyPointer;
-  argumentLabels @2 :List(Label);        # supplied by the executor, verified by gate
-  argumentProvenance @3 :List(Provenance);
+  arguments @1 :List(ValueHandle);       # gate resolves labels itself via labeld
 }
 
 enum RefusalReason {
@@ -167,6 +192,8 @@ struct Decision {
   }
   auditSeq @3 :UInt64;
   postcondition @4 :PostconditionResult; # set after the effect runs
+  digest @5 :Data;                       # invocation digest
+  approval @6 :SignedApproval;           # set when the effect was approved
 }
 
 interface Gate {
@@ -311,7 +338,8 @@ interface GrowthAdmin {
 
 interface Mail {
   draft @0 (to :List(Text), subject :Text, body :Text) -> (draft :ObjectRef)
-      $effect(localReversible);
+      $effect(localReversible)
+      $draftFor("send");
 
   send @1 (draft :ObjectRef) -> (messageId :Text)
       $effect(external)
