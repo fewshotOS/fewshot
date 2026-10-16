@@ -1,6 +1,6 @@
 # Designing around model limitations
 
-Models used as agents have known, recurring failure modes. Arbiter does not rely on a model overcoming them; it gives the system mechanisms that make each one visible, checkable, or harmless.
+Models used as agents have known, recurring failure modes. Fewshot does not rely on a model overcoming them; it gives the system mechanisms that make each one visible, checkable, or harmless.
 
 > These mechanisms make an agent more reliable **inside** its boundaries. None of them widen the boundaries. Approvals, capability limits and independent checks are limitations an agent should *not* design around.
 

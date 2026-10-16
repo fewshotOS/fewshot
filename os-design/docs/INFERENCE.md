@@ -1,6 +1,6 @@
 # Inference
 
-How models run on Arbiter.
+How models run on Fewshot.
 
 > **The model is a stateless function the OS runs — not a program that runs the OS.**
 > It holds no capabilities, keeps no hidden state, and its output is labeled data like any other.
@@ -73,7 +73,7 @@ Each call records: weight hash, adapter hashes, context refs, grammar, sampling 
 
 ## 9. Default models
 
-Arbiter is model-agnostic: `infer` loads any signed weights through the same interface. The defaults below are a starting point, chosen by these rules.
+Fewshot is model-agnostic: `infer` loads any signed weights through the same interface. The defaults below are a starting point, chosen by these rules.
 
 ### Selection rules
 

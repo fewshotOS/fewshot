@@ -31,7 +31,7 @@ Trusted computing base (TCB), in order of how much we care about shrinking and v
 
 **Not** in the TCB: every model, agentd's planner, readers **and executor** (ADR-0005: labels live in `labeld`, agents hold only handles), all apps, all drivers, the Linux VM.
 
-When running as the **Arbiter runtime** on a host OS (ADR-0007), the host kernel and its administrator are also in the TCB.
+When running as the **Fewshot runtime** on a host OS (ADR-0007), the host kernel and its administrator are also in the TCB.
 
 ## Explicitly out of scope (for now)
 

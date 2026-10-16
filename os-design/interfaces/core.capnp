@@ -1,4 +1,4 @@
-# Arbiter core interfaces — DRAFT v0.
+# Fewshot core interfaces — DRAFT v0.
 # Holding a reference to an interface is holding the authority to use it.
 
 @0xc95c9024d3404725;

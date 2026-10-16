@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes Arbiter's components, how they interact, and how each one upholds the invariants **I1–I6** defined in the [README](../README.md).
+This document describes Fewshot's components, how they interact, and how each one upholds the invariants **I1–I6** defined in the [README](../README.md).
 
 ## 1. Layering
 
@@ -68,7 +68,7 @@ User-space TCP/IP stack (smoltcp to start). It does not decide *what* may leave 
 ### linux-vm
 A Linux guest under an seL4 VMM. Two roles:
 1. **Driver domain** — reuse Linux drivers until native ones exist.
-2. **Legacy apps** — run unmodified Linux software. To Arbiter, the whole VM is one principal with the `untrusted:legacy` integrity label. Agents can interact with it only through an accessibility/screen bridge whose outputs are labeled low-integrity.
+2. **Legacy apps** — run unmodified Linux software. To Fewshot, the whole VM is one principal with the `untrusted:legacy` integrity label. Agents can interact with it only through an accessibility/screen bridge whose outputs are labeled low-integrity.
 
 See [ADR-0004](adr/0004-linux-compat-via-vm.md).
 
@@ -99,7 +99,7 @@ Model: decentralized information flow control (Flume/HiStar lineage), simplified
 - Every object carries a **label** and **provenance** (which principal created it, from which inputs).
 - **Indexes:** full-text, vector embeddings (computed via `infer`), and an entity/relation graph. Queries return only objects the caller's capabilities and labels permit, and reading them updates the caller's label.
 - **POSIX view:** a filesystem projection for legacy software and humans who want files.
-- **Memory service:** agent memory is just objects in the store, under the user's ownership, inspectable and deletable. (Fewshot's memory model is a good prototype for this layer.)
+- **Memory service:** agent memory is just objects in the store, under the user's ownership, inspectable and deletable. (This descends from the original Fewshot memory tool: local-first, user-owned context that improves from real work.)
 
 ### 4.3 txn — transactions
 
@@ -309,7 +309,7 @@ All IPC is defined in Cap'n Proto ([ADR-0002](adr/0002-rust-and-capnp.md)). Cap'
 
 ## 10. Delivery: runtime first
 
-The same core crates ship first as the **Arbiter runtime** on Linux, Windows and macOS — an MCP-compatible server exposing gated actions with labels, outbox and approvals — and later as the high-assurance OS. On a host OS the runtime cannot enforce I1 or I6 against a compromised host. See [ADR-0007](adr/0007-portable-runtime-first.md).
+The same core crates ship first as the **Fewshot runtime** on Linux, Windows and macOS — an MCP-compatible server exposing gated actions with labels, outbox and approvals — and later as the high-assurance OS. On a host OS the runtime cannot enforce I1 or I6 against a compromised host. See [ADR-0007](adr/0007-portable-runtime-first.md).
 
 ## 11. Open questions
 

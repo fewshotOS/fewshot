@@ -1,6 +1,6 @@
 # Growth
 
-How an agent on Arbiter gets better over time — and why it can never grow its way out of oversight.
+How an agent on Fewshot gets better over time — and why it can never grow its way out of oversight.
 
 > **An agent may improve what it knows and how well it works. It may never, by learning, change what it is allowed to do.**
 

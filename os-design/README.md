@@ -1,14 +1,14 @@
-# Arbiter
+# Fewshot
 
 **An operating system where AI agents are first-class users — and the kernel, not the model, decides what they may do.**
 
 > *The model proposes. The OS disposes.*
 
-Arbiter is a capability-based, formally-grounded operating system designed from the start for a world where software agents act on a user's behalf. It assumes every model is fallible and every piece of content may be hostile, and builds safety into the layers that can actually enforce it: capabilities, information-flow labels, transactions, and a trusted approval path.
+Fewshot is a capability-based, formally-grounded operating system designed from the start for a world where software agents act on a user's behalf. It assumes every model is fallible and every piece of content may be hostile, and builds safety into the layers that can actually enforce it: capabilities, information-flow labels, transactions, and a trusted approval path.
 
-> Status: **design phase**. Nothing here runs yet. "Arbiter" is a working name.
+> Status: **design phase**. Nothing here runs yet.
 >
-> Delivery is **runtime first**: the same policy core ships as a portable Arbiter runtime on Linux, Windows and macOS (MCP-compatible) before the high-assurance OS. See [ADR-0007](docs/adr/0007-portable-runtime-first.md).
+> Delivery is **runtime first**: the same policy core ships as a portable Fewshot runtime on Linux, Windows and macOS (MCP-compatible) before the high-assurance OS. See [ADR-0007](docs/adr/0007-portable-runtime-first.md).
 
 ## Why
 

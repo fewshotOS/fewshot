@@ -1,14 +1,14 @@
-# ADR-0007: Ship a portable Arbiter runtime before the OS
+# ADR-0007: Ship a portable Fewshot runtime before the OS
 
 **Status:** Proposed
 
 ## Context
-A microkernel OS with its own drivers, compositor and app ecosystem is a multi-year effort before anyone can use it. The most novel and valuable parts of Arbiter — labels, the gate, the outbox, the planner/reader executor, structured refusals, growth — do not depend on seL4. They are useful today to anyone running agents on Linux, Windows or macOS.
+A microkernel OS with its own drivers, compositor and app ecosystem is a multi-year effort before anyone can use it. The most novel and valuable parts of Fewshot — labels, the gate, the outbox, the planner/reader executor, structured refusals, growth — do not depend on seL4. They are useful today to anyone running agents on Linux, Windows or macOS.
 
 ## Decision
-Deliver Arbiter in two forms from one codebase:
+Deliver Fewshot in two forms from one codebase:
 
-| | **Arbiter runtime** | **Arbiter OS** |
+| | **Fewshot runtime** | **Fewshot OS** |
 |---|---|---|
 | Runs on | Linux, Windows, macOS | seL4 |
 | Isolation | OS processes / containers | seL4 protection domains |

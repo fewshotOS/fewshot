@@ -4,7 +4,7 @@ Each milestone ends with something demonstrable and a test that proves it.
 
 Delivery runs on two tracks from one codebase ([ADR-0007](adr/0007-portable-runtime-first.md)): the **runtime** on existing OSes first, the **OS** in parallel.
 
-### Track R — Arbiter runtime
+### Track R — Fewshot runtime
 
 | Milestone | Deliverable | Proof |
 |---|---|---|
@@ -13,7 +13,7 @@ Delivery runs on two tracks from one codebase ([ADR-0007](adr/0007-portable-runt
 | **R2 — Agent runtime** | Executor with handles, planner/reader split, drafts and checkpoints, adversarial injection harness | Zero unapproved violations with adversarial stubs |
 | **R3 — MCP release** | MCP-compatible server exposing gated actions; approval app; audit viewer; Linux, Windows, macOS builds | Usable by existing MCP clients; ≤ 3 approval prompts per hour of typical use |
 
-### Track O — Arbiter OS
+### Track O — Fewshot OS
 
 | Milestone | Deliverable | Proof |
 |---|---|---|
