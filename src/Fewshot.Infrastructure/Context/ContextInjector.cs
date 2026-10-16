@@ -3,6 +3,8 @@ using System.Text;
 using Fewshot.Core.Enums;
 using Fewshot.Core.Interfaces;
 using Fewshot.Core.Models;
+using Fewshot.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Fewshot.Infrastructure.Context;
 
@@ -16,6 +18,7 @@ public class ContextInjector : IContextInjector
     private readonly AclFormatter _acl;
     private readonly ProseFormatter _prose;
     private readonly ITokenCounter _tokenCounter;
+    private readonly FewshotDbContext _db;
 
     // These finding types warrant dropping the entire segment — credentials with zero legitimate use
     private static readonly HashSet<string> HardBlockTypes =
@@ -41,7 +44,8 @@ public class ContextInjector : IContextInjector
         IAuditService audit,
         AclFormatter acl,
         ProseFormatter prose,
-        ITokenCounter tokenCounter)
+        ITokenCounter tokenCounter,
+        FewshotDbContext db)
     {
         _experiments = experiments;
         _memory = memory;
@@ -51,6 +55,7 @@ public class ContextInjector : IContextInjector
         _acl = acl;
         _prose = prose;
         _tokenCounter = tokenCounter;
+        _db = db;
     }
 
     public async Task<ContextInjectionResult> BuildContextAsync(int sessionId, ContextInputs inputs)
@@ -63,22 +68,40 @@ public class ContextInjector : IContextInjector
         // Build semantic search query from current state
         var searchQuery = BuildSearchQuery(state);
 
-        // All three hit the same scoped FewshotDbContext (memory search is in-process
+        var project = string.IsNullOrWhiteSpace(state.Project) ? null : state.Project;
+
+        // All of these hit the same scoped FewshotDbContext (memory search is in-process
         // cosine over _db.Memories, not Qdrant) — must run sequentially
-        var memories = await _memory.SearchAsync(searchQuery, sessionId);
+        var memories = await _memory.SearchAsync(searchQuery, sessionId, project: project);
         var allPreferences = await _preferences.GetAllAsync();
-        var allAntiPatterns = await _antiPatterns.GetAllAsync();
+        var antiPatterns = await _antiPatterns.GetByProjectAsync(project);
 
         var inputs = new ContextInputs
         {
             State = state,
             Memories = memories,
             Preferences = allPreferences,
-            AntiPatterns = allAntiPatterns,
-            Facts = facts ?? new ProjectFacts()
+            AntiPatterns = antiPatterns,
+            Facts = facts ?? await HydrateFactsAsync()
         };
 
         return await BuildCoreAsync(sessionId, inputs);
+    }
+
+    private async Task<ProjectFacts> HydrateFactsAsync()
+    {
+        var projects = await _db.Projects
+            .Where(p => p.IsActive && p.Facts != null && p.Facts != "")
+            .OrderBy(p => p.DisplayName)
+            .Select(p => new { p.DisplayName, p.Facts })
+            .ToListAsync();
+
+        return new ProjectFacts
+        {
+            Projects = projects
+                .Select(p => new ProjectRegistryEntry { Name = p.DisplayName, Notes = p.Facts })
+                .ToList()
+        };
     }
 
     private async Task<ContextInjectionResult> BuildCoreAsync(int sessionId, ContextInputs inputs)

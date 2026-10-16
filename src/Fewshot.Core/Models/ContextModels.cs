@@ -107,4 +107,5 @@ public class ProjectRegistryEntry
     public string Name { get; set; } = string.Empty;
     public string Stack { get; set; } = string.Empty;
     public string? HostingInfo { get; set; }
+    public string? Notes { get; set; }
 }

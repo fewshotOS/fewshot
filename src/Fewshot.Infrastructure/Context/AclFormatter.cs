@@ -104,6 +104,10 @@ public class AclFormatter : IContextFormatter
 
     public string FormatP5(ProjectFacts facts)
     {
+        if (facts.Projects.Count == 0 && facts.Endpoints.Count == 0 &&
+            facts.KnownGoodPatterns.Count == 0 && facts.PinnedVersions.Count == 0)
+            return string.Empty;
+
         var sb = new StringBuilder();
         sb.AppendLine("§p5·facts");
 
@@ -114,6 +118,7 @@ public class AclFormatter : IContextFormatter
             {
                 var line = $"    {p.Name}: {p.Stack}";
                 if (!string.IsNullOrEmpty(p.HostingInfo)) line += $"|{p.HostingInfo}";
+                if (!string.IsNullOrEmpty(p.Notes)) line += $"|{p.Notes}";
                 sb.AppendLine(line);
             }
         }

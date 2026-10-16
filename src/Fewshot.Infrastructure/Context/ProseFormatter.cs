@@ -109,15 +109,24 @@ public class ProseFormatter : IContextFormatter
 
     public string FormatP5(ProjectFacts facts)
     {
+        if (facts.Projects.Count == 0 && facts.Endpoints.Count == 0 &&
+            facts.KnownGoodPatterns.Count == 0 && facts.PinnedVersions.Count == 0)
+            return string.Empty;
+
         var sb = new StringBuilder();
         sb.AppendLine("For reference, here is Joe's project registry and known facts:");
 
         foreach (var p in facts.Projects)
         {
-            sb.Append($"The {p.Name} project runs on {p.Stack}");
+            sb.Append($"The {p.Name} project");
+            if (!string.IsNullOrEmpty(p.Stack))
+                sb.Append($" runs on {p.Stack}");
             if (!string.IsNullOrEmpty(p.HostingInfo))
                 sb.Append($", hosted on {p.HostingInfo}");
-            sb.AppendLine(".");
+            sb.Append('.');
+            if (!string.IsNullOrEmpty(p.Notes))
+                sb.Append($" {p.Notes.TrimEnd('.')}.");
+            sb.AppendLine();
         }
 
         if (facts.Endpoints.Count > 0)

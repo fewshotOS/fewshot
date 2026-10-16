@@ -78,7 +78,7 @@ public class MemoryService : IMemoryService
         return ToStoredMemory(memory);
     }
 
-    public async Task<List<SemanticMemory>> SearchAsync(string query, int sessionId, int limit = 5, double minScore = 0.55)
+    public async Task<List<SemanticMemory>> SearchAsync(string query, int sessionId, int limit = 5, double minScore = 0.55, string? project = null)
     {
         float[] queryVector;
         try
@@ -94,6 +94,7 @@ public class MemoryService : IMemoryService
         // Pull all embeddings and score in-process
         // For thousands of memories this is ~10-20ms — acceptable for local use
         var all = await _db.Memories
+            .Where(m => project == null || m.Project == project || m.Project == null)
             .Select(m => new { m.PointId, m.SessionId, m.Summary, m.Solution, m.Approach,
                                m.OutcomeLabel, m.Tags, m.Language, m.CreatedAt, m.Embedding })
             .ToListAsync();

@@ -18,7 +18,7 @@ public interface IMemoryService
     /// Search for relevant memories given a query string.
     /// Returns memories above the relevance threshold, ordered by score.
     /// </summary>
-    Task<List<SemanticMemory>> SearchAsync(string query, int sessionId, int limit = 5, double minScore = 0.55);
+    Task<List<SemanticMemory>> SearchAsync(string query, int sessionId, int limit = 5, double minScore = 0.55, string? project = null);
 
     /// <summary>
     /// Retrieve a specific memory by its Qdrant point ID.
