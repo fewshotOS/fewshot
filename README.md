@@ -84,7 +84,7 @@ seL4 · Fuchsia · Genode · Redox · Plan 9 · Singularity/Midori · HiStar / F
 
 ## History
 
-This repository previously held the original Fewshot: a local-first context and memory layer for AI agents (C#, MCP, SQLite, Ollama). That code is archived unchanged on the [`archive/fewshot-v1`](../../tree/archive/fewshot-v1) branch. Its ideas live on in the memory and growth design ([GROWTH.md](docs/GROWTH.md)).
+This repository previously held the original Fewshot: a local-first context and memory layer for AI agents (C#, MCP, SQLite, Ollama). That code is archived unchanged on the [`archive/fewshot-v1`](https://github.com/fewshot-app/fewshot/tree/archive/fewshot-v1) branch. Its ideas live on in the memory and growth design ([GROWTH.md](docs/GROWTH.md)).
 
 ## License
 
