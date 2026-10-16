@@ -1,0 +1,13 @@
+[package]
+name = "fewshot-labeld"
+description = "Value table: labeled values behind session-scoped handles (ADR-0005)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+fewshot-labels.workspace = true
+
+[lints]
+workspace = true

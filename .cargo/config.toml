@@ -1,0 +1,3 @@
+# Bare-metal x86 has no SIMD floating point: use curve25519-dalek's portable backend.
+[target.x86_64-unknown-none]
+rustflags = ['--cfg', 'curve25519_dalek_backend="serial"']
