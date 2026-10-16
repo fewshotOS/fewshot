@@ -1,0 +1,35 @@
+name: specs
+
+on:
+  push:
+    branches: [main]
+    paths: ["specs/**", ".github/workflows/specs.yml"]
+  pull_request:
+    paths: ["specs/**", ".github/workflows/specs.yml"]
+
+jobs:
+  tla:
+    name: TLC model check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/cache@v4
+        with:
+          path: .tools/tla2tools-*.jar
+          key: tla2tools-${{ hashFiles('specs/check.sh') }}
+      - run: specs/check.sh tla
+
+  verus:
+    name: Verus proofs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .tools/verus-*
+          key: verus-${{ hashFiles('specs/check.sh') }}
+      - run: specs/check.sh verus
