@@ -28,6 +28,17 @@ public class AntiPatternService : IAntiPatternService
         return await query.OrderByDescending(a => a.CreatedAt).ToListAsync();
     }
 
+    public async Task<List<AntiPattern>> GetByProjectAsync(string? project)
+    {
+        // SessionId == 0 = pack imports (global). Null session project = global.
+        return await _db.AntiPatterns
+            .Where(a => a.SessionId == 0 ||
+                        _db.Sessions.Any(s => s.SessionId == a.SessionId &&
+                                              (s.Project == project || s.Project == null)))
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<List<AntiPattern>> GetAllAsync()
     {
         return await _db.AntiPatterns
