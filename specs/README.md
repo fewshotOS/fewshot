@@ -62,5 +62,5 @@ Each property was confirmed to fail against a deliberately broken copy of the mo
 - The TLA+ model is bounded: it shows the properties hold for every behaviour up to the bounds above, not for all sizes.
 - Approval digests are abstracted to effect ids. Signing and digest computation are not modeled.
 - Single-use approvals hold structurally here: each effect has a unique id and leaves the outbox when it runs. A retry mechanism would need this re-checked.
-- The Verus code is a reference model of the policy core, not yet the shipping crate. R1 ([#2](https://github.com/fewshotOS/fewshotos/issues/2)) builds the real crates and should keep these specifications as their contracts.
+- The Verus code is a reference model. The shipping crates in [`libs/`](../libs) implement the same rules and property-test the same laws, but are not themselves verified; verifying them directly is future work.
 - I1–I3 and I6 are not yet specified; I2/I3 are partly covered by `decide`.

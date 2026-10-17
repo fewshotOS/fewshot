@@ -1,0 +1,33 @@
+name: rust
+
+on:
+  push:
+    branches: [main]
+    paths: ["libs/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", "rustfmt.toml", ".github/workflows/rust.yml"]
+  pull_request:
+    paths: ["libs/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", "rustfmt.toml", ".github/workflows/rust.yml"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: fmt, clippy, test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+
+  no-std:
+    name: no_std build (${{ matrix.target }})
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        target: [x86_64-unknown-none, aarch64-unknown-none]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --locked --target ${{ matrix.target }} --no-default-features -p fewshot-labels -p fewshot-labeld -p fewshot-host -p fewshot-gate

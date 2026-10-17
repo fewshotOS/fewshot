@@ -1,0 +1,25 @@
+[package]
+name = "fewshot-gate"
+description = "The gate: capability, label and approval checks, outbox and audit for every action"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+fewshot-labels.workspace = true
+fewshot-labeld.workspace = true
+fewshot-host.workspace = true
+sha2.workspace = true
+ed25519-dalek.workspace = true
+
+# Bare-metal x86 targets have no SSE; use sha2's portable implementation there.
+[target.'cfg(all(target_arch = "x86_64", target_os = "none"))'.dependencies]
+sha2 = { workspace = true, features = ["force-soft"] }
+
+[dev-dependencies]
+fewshot-host = { workspace = true, features = ["std"] }
+proptest.workspace = true
+
+[lints]
+workspace = true
